@@ -4,8 +4,9 @@ from matplotlib import pyplot as plt
 
 # reading image
 #s_img = 'images/shapes.png'
-s_img = 'images/ville_1.jpg'
+#s_img = 'images/ville_1.jpg'
 #s_img = 'images/POPS-logo.png'
+s_img = 'images/pepaPig.png'
 
 img = cv2.imread(s_img)
 
@@ -35,7 +36,7 @@ for contour in contours:
         contour, 0.01 * cv2.arcLength(contour, True), True)
 
     # using drawContours() function
-    cv2.drawContours(img, [contour], 0, (0, 0, 255), 1)
+    cv2.drawContours(img, [contour], 0, (0, 0, 255), 2)
 
     # finding center point of shape
     M = cv2.moments(contour)

@@ -2,6 +2,9 @@ import cv2
 import svgwrite
 import tkinter
 from tkinter import filedialog
+import soundfile as sf
+import numpy as np
+import sounddevice as sd
 
 height = 600
 width = 800
@@ -41,6 +44,32 @@ def clear_canvas(canvas):
     canvas.delete('all')
     drawing = True
 
+def moduler_signal_audio():
+    global xList, yList
+
+    # Normalisez les coordonnées du dessin entre 0 et 1
+    x_normalized = (np.array(xList) - min(xList)) / (max(xList) - min(xList))
+    y_normalized = (np.array(yList) - min(yList)) / (max(yList) - min(yList))
+
+    # Créez un signal audio en fonction des coordonnées normalisées
+    signal_audio = x_normalized + 1j * y_normalized
+
+    # Modulation du signal audio
+    modulation_frequency = 440  # Fréquence de modulation en Hz
+    t = np.arange(len(signal_audio)) / 44100.0  # Échantillonnage à 44.1 kHz
+    carrier_wave = np.sin(2 * np.pi * modulation_frequency * t)
+    modulated_signal = np.real(signal_audio * carrier_wave)
+
+    # Enregistrez le signal audio dans un fichier WAV dans le répertoire spécifié
+    output_directory = "./"  # chemin du répertoire
+    output_filename = "signal_audio.wav"
+    output_path = f"{output_directory}/{output_filename}"
+
+    sf.write(output_path, modulated_signal, 44100)
+
+    # Jouez le signal modulé
+    sd.play(modulated_signal, samplerate=44100)
+    sd.wait()
 
 def charger_et_traiter_image():
     # Ouvrir une boîte de dialogue pour sélectionner un fichier image
@@ -101,6 +130,9 @@ def convertir_en_svg():
     for i in range(len(xList) - 1):
         x1, y1, x2, y2 = xList[i], yList[i], xList[i + 1], yList[i + 1]
         dwg.add(svgwrite.shapes.Line(start=(x1, y1), end=(x2, y2), stroke=color, stroke_width=3))
+
+    # Moduler le signal audio
+    moduler_signal_audio()
 
     # Save the file
     image_folder = filedialog.asksaveasfile(defaultextension='.svg',

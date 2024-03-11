@@ -115,15 +115,22 @@ def convert_form_to_signal():
         print("RATE : ", rate)
         raise ValueError("Samplerate of over ", get_default_output_device_sample_rate, " can be incompatible with the computer audio board.")
 
-    #x_interpolation = np.linspace(-1, 1, int (get_default_output_device_sample_rate() / frequency))
-    #y_interpolation = np.interp(x_interpolation, x_normalized, y_normalized)
-    x_interpolation = x_normalized
-    y_interpolation = y_normalized
+    x_interpolation = np.linspace(-1, 1, int (get_default_output_device_sample_rate() / frequency))
+    x_interpolation = np.arange(0, len(y_normalized), 0.5)
+    indices = np.arange(0, len(y_normalized), 1)
+
+    y_interpolation = np.interp(x_interpolation, indices, y_normalized)
+    x_interpolation2 = np.interp(x_interpolation, indices, x_normalized)
+
+
+
+    #x_interpolation = x_normalized
+    #y_interpolation = y_normalized
 
     figure, axis = plt.subplots(2, 1)
 
-    axis[0].plot(x_normalized, y_normalized)
-    axis[1].plot(x_interpolation, y_interpolation)
+    axis[0].plot(x_interpolation2)
+    axis[1].plot(x_interpolation2, y_interpolation)
     plt.show()
 
     data_x = []

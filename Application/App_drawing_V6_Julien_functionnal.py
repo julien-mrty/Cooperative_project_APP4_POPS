@@ -91,84 +91,49 @@ def convert_form_to_signal():
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    personlized_rate = len(x_normalized) * FORMS_PER_SECONDE
+    frequency = 30
+    wavFileDuration = 5  # Seconds, must be an integer. Careful, building time for the WAV file with long time can be very long.
+    drawRepetition = frequency * wavFileDuration  # Nombre de répétitions du dessin.
+    OutputFilename = './audio/Free.wav'
 
-    print("x_normalized size : ", x_normalized.size)
-    print("y_normalized size : ", y_normalized.size)
+    RATE = len(xList) * frequency
+    if RATE > 48000:
+        print("RATE : ", RATE)
+        raise ValueError("Samplerate of over 48kHz can be incompatible with the computer audio board.")
+        return
 
-    # Créez un signal audio en fonction des coordonnées normalisées
-    list_x, list_y = signal_repetition(x_normalized, y_normalized)
-    #list_x, list_y = signal_repetition_personalized_rate(x_normalized, y_normalized)
+    data_x = []
+    data_y = []
+    for i in range(drawRepetition):
+        for n in range(len(x_normalized)):
+            print("index : ", n)
+            print("_____ X value : ", x_normalized[n])
+            print("_____ Y value : ", y_normalized[n])
 
-    print("X length : ", len(list_x))
-    print("Y length : ", len(list_y))
+            data_x.append(x_normalized[n])
+            data_y.append(y_normalized[n])
 
-    wav_file = wave.open(audio_name, "w")
+    wv = wave.open(OutputFilename, 'w')
+    wv.setparams((2, 2, RATE, 0, 'NONE', 'not compressed'))
+    maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
+    wvData = b""
+    print(len(data_x))
 
-    nchannels = 2
-    sampwidth = 2
-    nframes = data_size
-    #nframes = 0
-    comptype = "NONE"
-    compname = "not compressed"
+    for i in range(len(data_x)):
+        print("LEFT : ", maxVol * data_x[i])
+        print("RIGHT : ", maxVol * data_y[i])
 
-    wav_file.setparams((nchannels, sampwidth, COMPUTER_SOUND_RATE, nframes, comptype, compname))
-    #wav_file.setparams((nchannels, sampwidth, personlized_rate, nframes, comptype, compname))
+        wvData += struct.pack('h', int(maxVol * data_x[i]))  # Left
+        wvData += struct.pack('h', int(maxVol * data_y[i]))  # Right
 
-    for x, y in zip(list_x, list_y):
-        # write the audio frames to file
-        wav_file.writeframes(struct.pack('h', int(x * amplitude)))
-        wav_file.writeframes(struct.pack('h', int(y * amplitude)))
-
-    wav_file.close()
+    wv.writeframes(wvData)
+    # print(wvData)
+    wv.close()
+    print("WAV file is ready.")
 
     # Clear the canva
     canvas.delete("all")  # Efface le dessin sur le canevas
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
-
-
-def signal_repetition_personalized_rate(list_x, list_y):
-    my_rate = len(list_x) * FORMS_PER_SECONDE
-
-    if my_rate > COMPUTER_SOUND_RATE:
-        # Clear the canva
-        canvas.delete("all")  # Efface le dessin sur le canevas
-        canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
-        return
-
-    output_signal_x = []
-    output_signal_y = []
-
-    for i in range(FORMS_PER_SECONDE * RECORD_DURATION):
-        for j in range(len(list_x)):
-            output_signal_x.append(list_x[j])
-            output_signal_y.append(list_y[j])
-
-    return output_signal_x, output_signal_y
-
-
-def signal_repetition(list_x, list_y):
-    if COMPUTER_SOUND_RATE / len(list_x) < FORMS_PER_SECONDE:
-        # Clear the canva
-        canvas.delete("all")  # Efface le dessin sur le canevas
-        canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
-        return
-
-    output_signal_x = []
-    output_signal_y = []
-
-    for i in range(RECORD_DURATION):
-        for j in range(COMPUTER_SOUND_RATE):
-            index_list = int((j * len(list_x)) / COMPUTER_SOUND_RATE)
-
-            print("index : ", index_list)
-            print("___ value : ", list_x[index_list])
-            print("J : ", j)
-            print("len(list_x) : ", len(list_x))
-            output_signal_x.append(list_x[index_list])
-            output_signal_y.append(list_y[index_list])
-
-    return output_signal_x, output_signal_y
 
 
 def charger_et_traiter_image():

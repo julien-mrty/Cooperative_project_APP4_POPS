@@ -38,10 +38,23 @@ framerate = 11025.0 # framerate as a float
 data_size = 240000
 amplitude = 2 ** 15 - 1 # multiplier for amplitude
 
-COMPUTER_SOUND_RATE = 48000
+
+#COMPUTER_RATE = 48000
 RECORD_DURATION = 5
 FORMS_PER_SECONDE = 30
 personlized_rate = 0
+
+
+def get_default_output_device_sample_rate():
+    # Obtenir l'ID du dispositif de sortie audio par défaut
+    default_output_device = sd.default.device[1]
+    # Obtenir les informations du dispositif
+    device_info = sd.query_devices(default_output_device, 'output')
+    # Retourner la fréquence d'échantillonnage par défaut
+    return device_info['default_samplerate']
+
+DEFAULT_COMPUTER_RATE = int (get_default_output_device_sample_rate())
+print(f"Default Output Device Sample Rate: {DEFAULT_COMPUTER_RATE} Hz")
 
 
 def onClick(event):
@@ -73,17 +86,6 @@ def clear_canvas(canva):
     drawing = True
 
 
-def get_default_output_device_sample_rate():
-    # Obtenir l'ID du dispositif de sortie audio par défaut
-    default_output_device = sd.default.device[1]
-    # Obtenir les informations du dispositif
-    device_info = sd.query_devices(default_output_device, 'output')
-    # Retourner la fréquence d'échantillonnage par défaut
-    return device_info['default_samplerate']
-
-sample_rate = get_default_output_device_sample_rate()
-print(f"Default Output Device Sample Rate: {sample_rate} Hz")
-
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
 
@@ -91,29 +93,28 @@ def convert_form_to_signal():
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    personlized_rate = len(x_normalized) * FORMS_PER_SECONDE
-
     print("x_normalized size : ", x_normalized.size)
     print("y_normalized size : ", y_normalized.size)
 
     # Créez un signal audio en fonction des coordonnées normalisées
     list_x, list_y = signal_repetition(x_normalized, y_normalized)
-    #list_x, list_y = signal_repetition_personalized_rate(x_normalized, y_normalized)
 
     print("X length : ", len(list_x))
     print("Y length : ", len(list_y))
+    print("DEFAULT_COMPUTER_RATE : ", DEFAULT_COMPUTER_RATE)
+    print("nframes : ", DEFAULT_COMPUTER_RATE * RECORD_DURATION)
+
 
     wav_file = wave.open(audio_name, "w")
 
     nchannels = 2
     sampwidth = 2
-    nframes = data_size
-    #nframes = 0
+    #nframes = DEFAULT_COMPUTER_RATE * RECORD_DURATION
+    nframes = 0
     comptype = "NONE"
     compname = "not compressed"
 
-    wav_file.setparams((nchannels, sampwidth, COMPUTER_SOUND_RATE, nframes, comptype, compname))
-    #wav_file.setparams((nchannels, sampwidth, personlized_rate, nframes, comptype, compname))
+    wav_file.setparams((nchannels, sampwidth, DEFAULT_COMPUTER_RATE, nframes, comptype, compname))
 
     for x, y in zip(list_x, list_y):
         # write the audio frames to file
@@ -127,28 +128,8 @@ def convert_form_to_signal():
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
 
 
-def signal_repetition_personalized_rate(list_x, list_y):
-    my_rate = len(list_x) * FORMS_PER_SECONDE
-
-    if my_rate > COMPUTER_SOUND_RATE:
-        # Clear the canva
-        canvas.delete("all")  # Efface le dessin sur le canevas
-        canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
-        return
-
-    output_signal_x = []
-    output_signal_y = []
-
-    for i in range(FORMS_PER_SECONDE * RECORD_DURATION):
-        for j in range(len(list_x)):
-            output_signal_x.append(list_x[j])
-            output_signal_y.append(list_y[j])
-
-    return output_signal_x, output_signal_y
-
-
 def signal_repetition(list_x, list_y):
-    if COMPUTER_SOUND_RATE / len(list_x) < FORMS_PER_SECONDE:
+    if get_default_output_device_sample_rate() / len(list_x) < FORMS_PER_SECONDE:
         # Clear the canva
         canvas.delete("all")  # Efface le dessin sur le canevas
         canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
@@ -156,15 +137,20 @@ def signal_repetition(list_x, list_y):
 
     output_signal_x = []
     output_signal_y = []
+    last = 0
 
     for i in range(RECORD_DURATION):
-        for j in range(COMPUTER_SOUND_RATE):
-            index_list = int((j * len(list_x)) / COMPUTER_SOUND_RATE)
+        for j in range(DEFAULT_COMPUTER_RATE):
+            index_list = int((j * len(list_x)) / DEFAULT_COMPUTER_RATE)
 
-            print("index : ", index_list)
-            print("___ value : ", list_x[index_list])
-            print("J : ", j)
-            print("len(list_x) : ", len(list_x))
+            if index_list != last:
+                last = index_list
+                print("index : ", index_list)
+                print("_____ X value : ", list_x[index_list])
+                print("_____ Y value : ", list_y[index_list])
+                print("J : ", j)
+                print("len(list_x) : ", len(list_x))
+
             output_signal_x.append(list_x[index_list])
             output_signal_y.append(list_y[index_list])
 

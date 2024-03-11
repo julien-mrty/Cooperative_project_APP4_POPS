@@ -114,16 +114,26 @@ def convert_form_to_signal():
         print("RATE : ", RATE)
         raise ValueError("Samplerate of over ", get_default_output_device_sample_rate," can be incompatible with the computer audio board.")
 
+    print("OK 1")
+    x_interpolation = np.linspace(0, 1, int ((get_default_output_device_sample_rate()) / frequency))
+    y_interpolation = np.interp(x_interpolation, x_normalized, y_normalized)
+    print("OK 2")
+
     data_x = []
     data_y = []
 
+    print("drawRepetition : ", drawRepetition)
+    print("len(x_interpolation) : ", len(x_interpolation))
+
     for i in range(drawRepetition):
-        for j in range(len(x_normalized)):
-            data_x.append(x_normalized[j])
-            data_y.append(y_normalized[j])
+        for j in range(len(x_interpolation)):
+            data_x.append(x_interpolation[j])
+            data_y.append(y_interpolation[j])
+
+    print("OK 3")
 
     wv = wave.open(OutputFilename, 'w')
-    wv.setparams((2, 2, RATE, 0, 'NONE', 'not compressed'))
+    wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))
     maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
     wvData = b""
 

@@ -72,8 +72,14 @@ def clear_canvas(canva):
     canva.delete('all')
     drawing = True
 
+def clear_wrong_values(tab):
+    for i in range(len(tab)):
+        if tab[i] < -1:
+            tab[i] = -1
+        elif tab[i] > 1:
+            tab[i] = 1
 
-
+    return tab
 
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
@@ -82,121 +88,52 @@ def convert_form_to_signal():
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
+    x_normalized = clear_wrong_values(x_normalized)
+    y_normalized = clear_wrong_values(y_normalized)
+
     frequency = 30
-    wavFileDuration = 5  # Seconds, must be an integer. Careful, building time for the WAV file with long time can be very long.
+    wavFileDuration = 5  # Seconds, must be an integer.
     drawRepetition = frequency * wavFileDuration  # Nombre de répétitions du dessin.
     OutputFilename = './audio/Free.wav'
 
-    RATE = len(xList) * frequency
-    if RATE > 48000:
-        print("RATE : ", RATE)
-        raise ValueError("Samplerate of over 48kHz can be incompatible with the computer audio board.")
-        return
+    # Calcul du nombre total de points dans le dessin
+    total_points = len(x_normalized)
+    # Calcul du nombre de points maximum autorisés
+    max_points = 48000
+
+    if total_points <= max_points:
+        step_size = 1
+    else:
+        step_size = total_points // max_points
 
     data_x = []
     data_y = []
     for i in range(drawRepetition):
-        for n in range(len(x_normalized)):
+        for n in range(0, total_points, step_size):
             print("index : ", n)
             print("_____ X value : ", x_normalized[n])
             print("_____ Y value : ", y_normalized[n])
-
             data_x.append(x_normalized[n])
             data_y.append(y_normalized[n])
 
     wv = wave.open(OutputFilename, 'w')
-    wv.setparams((2, 2, RATE, 0, 'NONE', 'not compressed'))
+    wv.setparams((2, 2, int(framerate), 0, 'NONE', 'not compressed'))
     maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
     wvData = b""
-    print(len(data_x))
 
     for i in range(len(data_x)):
         print("LEFT : ", maxVol * data_x[i])
         print("RIGHT : ", maxVol * data_y[i])
-
         wvData += struct.pack('h', int(maxVol * data_x[i]))  # Left
         wvData += struct.pack('h', int(maxVol * data_y[i]))  # Right
 
     wv.writeframes(wvData)
-    # print(wvData)
     wv.close()
-    print("WAV file is ready.")
 
-    # Clear the canva
-    canvas.delete("all")  # Efface le dessin sur le canevas
+    canvas.delete("all")
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
 
-
-def charger_et_traiter_image():
-    # Ouvrir une boîte de dialogue pour sélectionner un fichier image
-    fichier_image = filedialog.askopenfilename()
-
-    if fichier_image:
-        # Lire l'image depuis le fichier sélectionné
-        img = cv2.imread(fichier_image)
-
-        # Conversion de l'image en niveaux de gris
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Définition du seuil de l'image en niveaux de gris
-        _, threshold = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-
-        # Utilisation de la fonction findContours pour détecter les contours
-        contours, _ = cv2.findContours(threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Création d'un objet SVG
-        dwg = svgwrite.Drawing('contours.svg', profile='tiny', size=(img.shape[1], img.shape[0]))
-
-        # Dessiner les contours dans le fichier SVG
-        for contour in contours:
-            # Approximation de la forme
-            epsilon = 0.02 * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
-
-            # Création d'un chemin SVG à partir des contours
-            path_data = ""
-            for point in approx:
-                x, y = point[0]
-                if path_data == "":
-                    path_data = f"M{x},{y}"
-                else:
-                    path_data += f" L{x},{y}"
-            path_data += " Z"  # Fermer le chemin
-
-            # Ajouter le chemin SVG à l'objet SVG
-            path = svgwrite.path.Path(d=path_data, stroke=svgwrite.rgb(255, 0, 0, '%'), fill='none', stroke_width=2)
-            dwg.add(path)
-
-        # Enregistrez le fichier SVG
-        dwg.save()
-
-        # Affichez l'image avec les contours
-        img_with_contours = img.copy()
-        cv2.drawContours(img_with_contours, contours, -1, (0, 0, 255), 2)
-        cv2.imshow('Image avec contours', img_with_contours)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-
-def convertir_en_svg():
-    # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
-
-    # Dessiner les lignes du dessin en SVG
-    for i in range(len(xList) - 1):
-        x1, y1, x2, y2 = xList[i], yList[i], xList[i + 1], yList[i + 1]
-        dwg.add(svgwrite.shapes.Line(start=(x1, y1), end=(x2, y2), stroke=color, stroke_width=3))
-
-    # Save the svg image
-    dwg.save()
-    # image_folder = filedialog.asksaveasfile(defaultextension='.svg',
-    #                                         filetypes=[
-    #                                             ("SVG file", ".svg")
-    #                                         ])
-
-    # Clear the canva
-    canvas.delete("all")  # Efface le dessin sur le canevas
-    canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Dessin converti en SVG", font=("Helvetica", 16))
+    print("WAV file is ready.")
 
 
 def initWindow():

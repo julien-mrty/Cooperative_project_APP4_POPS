@@ -98,6 +98,7 @@ def convert_form_to_signal():
 
     RATE = len(xList) * frequency
     if RATE > 48000:
+        print("RATE : ", RATE)
         raise ValueError("Samplerate of over 48kHz can be incompatible with the computer audio board.")
         return
 

@@ -7,6 +7,7 @@ import svgwrite  # Pour créer des fichiers SVG
 import wave  # Pour la manipulation de fichiers audio WAV
 import struct  # Pour manipuler des données binaires
 import sounddevice as sd  # Pour jouer du son
+import os  # Pour manipuler le systeme
 
 # Variables globales pour la fenêtre et le canvas
 window = 0
@@ -151,7 +152,60 @@ def convert_form_to_signal():
 
     print("Le fichier WAV est prêt.")
 
-# Initialisation de la fenêtre et des éléments graphiques
+
+# Variables globales
+playing_audio = False
+current_audio_file = None
+audio_data = None
+
+# Fonction pour ouvrir la fenêtre de liste des fichiers audio
+def open_audio_files_window():
+    global playing_audio
+    audio_files_window = tkinter.Toplevel(window)
+    audio_files_window.title("Liste des fichiers audio convertis en dessin")
+
+    # Trouver tous les fichiers audio dans le dossier "audio"
+    audio_files = [f for f in os.listdir("./audio") if f.endswith(".wav")]
+
+    # Fonction pour lire ou arrêter un fichier audio sélectionné
+    def toggle_audio(audio_file):
+        global playing_audio, current_audio_file, audio_data
+
+        if playing_audio and current_audio_file == audio_file:
+            sd.stop()
+            playing_audio = False
+        else:
+            try:
+                wf = wave.open(f"./audio/{audio_file}", 'rb')
+                frames = wf.readframes(wf.getnframes())
+                audio_data = np.frombuffer(frames, dtype=np.int16)
+                sd.play(audio_data, wf.getframerate())
+                current_audio_file = audio_file
+                playing_audio = True
+                wf.close()
+            except Exception as e:
+                print(f"Erreur lors de la lecture du fichier audio : {e}")
+
+    # Fonction pour créer les boutons de lecture pour chaque fichier audio
+    def create_play_buttons():
+        for audio_file in audio_files:
+            play_button = tkinter.Button(audio_files_window, text=audio_file, command=lambda af=audio_file: toggle_audio(af))
+            play_button.pack()
+
+    # Création des boutons pour chaque fichier audio
+    create_play_buttons()
+
+    # Fonction pour arrêter l'audio lorsque la fenêtre est fermée
+    def on_close():
+        global playing_audio
+        if playing_audio:
+            sd.stop()
+            playing_audio = False
+        audio_files_window.destroy()
+
+    audio_files_window.protocol("WM_DELETE_WINDOW", on_close)
+
+# Fonction pour initialiser la fenêtre principale
 def initWindow():
     global window, canvas
     window = tkinter.Tk()
@@ -172,6 +226,10 @@ def initWindow():
     # Bouton pour convertir en signal audio
     bouton_convertir_audio = tkinter.Button(window, text="Convertir en signal audio", command=convert_form_to_signal)
     bouton_convertir_audio.place(x=get_next_x_button_position(button_clear_canva), y=get_next_y_button_position())
+
+    # Bouton pour ouvrir la liste des fichiers audio convertis
+    bouton_audio_files = tkinter.Button(window, text="Parcourir les fichiers audio", command=open_audio_files_window)
+    bouton_audio_files.place(x=get_next_x_button_position(bouton_convertir_audio), y=get_next_y_button_position())
 
     # Canvas pour dessiner
     canvas = tkinter.Canvas(window, width=CANVA_WIDTH, height=CANVA_HEIGHT, bg='white')

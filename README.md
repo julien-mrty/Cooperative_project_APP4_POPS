@@ -1,5 +1,5 @@
-- Lancer l'audio depuis l'interface
-- Voir si autres méthodes pour interpolation
-- Sauvegarder image via liste des points
-- Demander de donner un nom au fichier lors de la sauvegarde
-- Donnner la possibilité de dessiner en plusieurs morceaux en coupant le laser à chaque fois
+- Lancer l'audio depuis l'interface [ FAIT : il y a un probleme avec le positionnement du bouton ]
+- Voir si autres méthodes pour interpolation [ FAIT : à voir si c'est vraiment utile ]
+- Sauvegarder image via liste des points [ FAIT : il y a un probleme avec le clear canva, ca n'efface pas les dessins meme lorsque la page est blanche ]
+- Demander de donner un nom au fichier lors de la sauvegarde [ FAIT ]
+- Donnner la possibilité de dessiner en plusieurs morceaux en coupant le laser à chaque fois  : [ Flemme en vrai, on verra si c'est necessaire ] 

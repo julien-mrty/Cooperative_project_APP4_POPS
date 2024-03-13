@@ -1,6 +1,6 @@
 # Importation des bibliothèques nécessaires
 import tkinter
-from tkinter import filedialog  # Pour les boîtes de dialogue de sélection de fichiers
+from tkinter import filedialog, messagebox  # Pour les boîtes de dialogue de sélection de fichiers
 import cv2  # OpenCV pour le traitement d'images
 import numpy as np  # Pour les opérations mathématiques
 import svgwrite  # Pour créer des fichiers SVG
@@ -8,6 +8,12 @@ import wave  # Pour la manipulation de fichiers audio WAV
 import struct  # Pour manipuler des données binaires
 import sounddevice as sd  # Pour jouer du son
 import os  # Pour manipuler le systeme
+
+# Variables globales pour l'audio
+playing_audio = False
+current_audio_file = None
+audio_data = None
+saved_drawings = []
 
 # Variables globales pour la fenêtre et le canvas
 window = 0
@@ -94,9 +100,48 @@ def clear_wrong_values(tab):
 
     return tab
 
+# Fonction pour interpoler les points, lisser les transitions entre les points du dessin
+def interpolate_points(x_points, y_points, interpolation_factor):
+    """
+    Interpolates points in the drawing to smooth out the signal.
+
+    Parameters:
+        x_points (list): List of x coordinates.
+        y_points (list): List of y coordinates.
+        interpolation_factor (int): Factor for interpolation (1 = no interpolation).
+
+    Returns:
+        Tuple of interpolated x and y points.
+    """
+    interpolated_x = []
+    interpolated_y = []
+
+    for i in range(len(x_points) - 1):
+        x0, y0 = x_points[i], y_points[i]
+        x1, y1 = x_points[i + 1], y_points[i + 1]
+
+        # Add the original point
+        interpolated_x.append(x0)
+        interpolated_y.append(y0)
+
+        # Interpolate between the original points
+        for j in range(1, interpolation_factor):
+            t = j / interpolation_factor
+            interpolated_x.append(x0 + t * (x1 - x0))
+            interpolated_y.append(y0 + t * (y1 - y0))
+
+    # Add the last point
+    interpolated_x.append(x_points[-1])
+    interpolated_y.append(y_points[-1])
+
+    return interpolated_x, interpolated_y
+
 # Fonction pour convertir le dessin en signal audio
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
+
+    # Interpoler les points du dessin
+    interpolated_x, interpolated_y = interpolate_points(xList, yList, interpolation_factor=5)
 
     # Normalisation des coordonnées du dessin entre -1 et 1
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
@@ -148,15 +193,11 @@ def convert_form_to_signal():
 
     # Effacer le canvas après la conversion
     canvas.delete("all")
-    canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
+    canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="La forme est convertie avec succès. Le fichier WAV est prêt !", font=("Arial", 16))
 
     print("Le fichier WAV est prêt.")
 
 
-# Variables globales
-playing_audio = False
-current_audio_file = None
-audio_data = None
 
 # Fonction pour ouvrir la fenêtre de liste des fichiers audio
 def open_audio_files_window():
@@ -205,11 +246,55 @@ def open_audio_files_window():
 
     audio_files_window.protocol("WM_DELETE_WINDOW", on_close)
 
+# Fonction pour ouvrir la fenêtre de sauvegarde de dessin
+def open_save_drawing_window():
+    save_window = tkinter.Toplevel(window)
+    save_window.title("Sauvegarder le dessin")
+
+    def save_drawing():
+        global xList, yList, saved_drawings
+        drawing_name = entry_drawing_name.get()
+        if drawing_name:
+            saved_drawings.append((drawing_name, xList.copy(), yList.copy()))
+            messagebox.showinfo("Sauvegarde réussie", "Le dessin a été sauvegardé avec succès.")
+            save_window.destroy()
+        else:
+            messagebox.showerror("Erreur de sauvegarde", "Veuillez entrer un nom pour le dessin.")
+
+    label_drawing_name = tkinter.Label(save_window, text="Nom du dessin:")
+    label_drawing_name.pack()
+
+    entry_drawing_name = tkinter.Entry(save_window, width=30)
+    entry_drawing_name.pack()
+
+    button_save_drawing = tkinter.Button(save_window, text="Sauvegarder", command=save_drawing)
+    button_save_drawing.pack()
+
+
+# Fonction pour ouvrir la fenêtre de visualisation des dessins sauvegardés
+def open_view_drawings_window():
+    view_window = tkinter.Toplevel(window)
+    view_window.title("Dessins sauvegardés")
+
+    def view_drawing(drawing):
+        nonlocal view_window
+        canvas_view = tkinter.Canvas(view_window, width=CANVA_WIDTH, height=CANVA_HEIGHT, bg='white')
+        canvas_view.pack()
+
+        x_points, y_points = drawing[1], drawing[2]
+        for i in range(len(x_points) - 1):
+            canvas_view.create_line(x_points[i], y_points[i], x_points[i + 1], y_points[i + 1], fill='black', width=3)
+
+    for drawing in saved_drawings:
+        button_view_drawing = tkinter.Button(view_window, text=drawing[0], command=lambda d=drawing: view_drawing(d))
+        button_view_drawing.pack()
+
+
 # Fonction pour initialiser la fenêtre principale
 def initWindow():
     global window, canvas
     window = tkinter.Tk()
-    window.title('Dessiner ou Charger une Image')
+    window.title('DrawMe')
 
     # Bouton pour dessiner
     button_draw = tkinter.Button(window, text="Dessiner", command=lambda: {
@@ -231,9 +316,20 @@ def initWindow():
     bouton_audio_files = tkinter.Button(window, text="Parcourir les fichiers audio", command=open_audio_files_window)
     bouton_audio_files.place(x=get_next_x_button_position(bouton_convertir_audio), y=get_next_y_button_position())
 
+    # Bouton pour sauvegarder le dessin
+    bouton_sauvegarder_dessin = tkinter.Button(window, text="Sauvegarder le dessin", command=open_save_drawing_window)
+    bouton_sauvegarder_dessin.place(x=get_next_x_button_position(bouton_convertir_audio),
+                                    y=get_next_y_button_position())
+
+    # Bouton pour visualiser les dessins sauvegardés
+    bouton_visualiser_dessins = tkinter.Button(window, text="Visualiser les dessins", command=open_view_drawings_window)
+    bouton_visualiser_dessins.place(x=get_next_x_button_position(bouton_sauvegarder_dessin),
+                                    y=get_next_y_button_position())
+
     # Canvas pour dessiner
     canvas = tkinter.Canvas(window, width=CANVA_WIDTH, height=CANVA_HEIGHT, bg='white')
     canvas.place(x=10, y=40)
+
 
     # Taille de la fenêtre
     window_size_str = "{0}x{1}".format(WINDOW_WIDTH, WINDOW_HEIGHT)

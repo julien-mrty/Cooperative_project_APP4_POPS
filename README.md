@@ -1,5 +1,5 @@
 - Lancer l'audio depuis l'interface
 - Voir si autres méthodes pour interpolation
 - Sauvegarder image via liste des points
-- Demander de donner un nom au fichier
-  
+- Demander de donner un nom au fichier lors de la sauvegarde
+- Donnner la possibilité de dessiner en plusieurs morceaux en coupant le laser à chaque fois

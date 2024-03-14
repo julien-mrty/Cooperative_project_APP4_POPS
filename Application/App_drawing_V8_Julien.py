@@ -115,20 +115,16 @@ def convert_form_to_signal():
         print("RATE : ", rate)
         raise ValueError("Samplerate of over ", get_default_output_device_sample_rate, " can be incompatible with the computer audio board.")
 
-    x_interpolation = np.linspace(-1, 1, int (get_default_output_device_sample_rate() / frequency))
     initial_indices = np.arange(0, len(x_normalized), 1)
     new_indices = np.arange(0, len(x_normalized), len(x_normalized) / int (get_default_output_device_sample_rate() / frequency))
-
-    print("Nombre de points  par image souhaîté : ", int (get_default_output_device_sample_rate() / frequency))
-    print("LEN NEW  : ", len(new_indices))
 
     x_interpolated = np.interp(new_indices, initial_indices, x_normalized)
     y_interpolated = np.interp(new_indices, initial_indices, y_normalized)
 
     figure, axis = plt.subplots(2, 1)
 
-    axis[0].plot(x_interpolation)
-    axis[1].plot(x_interpolated)
+    axis[0].plot(x_interpolated)
+    axis[1].plot(x_interpolated, y_interpolated)
     plt.show()
 
     data_x = []

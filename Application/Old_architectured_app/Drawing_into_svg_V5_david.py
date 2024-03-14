@@ -7,6 +7,9 @@ import svgwrite
 import wave
 import struct
 
+import sounddevice as sd
+
+
 
 # Canva and window
 window = 0
@@ -35,7 +38,11 @@ audio_name = "./audio/WaveStereo.wav"
 # Échantillonnage à x kHz
 framerate = 11025.0 # framerate as a float
 data_size = 100000
-amplitude = 64000.0     # multiplier for amplitude
+amplitude = 32000     # multiplier for amplitude
+
+COMPUTER_SOUND_RATE = 48000
+RECORD_DURATION = 5
+FORMS_PER_SECONDE = 30
 
 
 def onClick(event):
@@ -77,7 +84,16 @@ def signal_moduler(signal_audio):
 
     return modulated_signal
 """
+def get_default_output_device_sample_rate():
+    # Obtenir l'ID du dispositif de sortie audio par défaut
+    default_output_device = sd.default.device[1]
+    # Obtenir les informations du dispositif
+    device_info = sd.query_devices(default_output_device, 'output')
+    # Retourner la fréquence d'échantillonnage par défaut
+    return device_info['default_samplerate']
 
+sample_rate = get_default_output_device_sample_rate()
+print(f"Default Output Device Sample Rate: {sample_rate} Hz")
 
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
@@ -88,40 +104,64 @@ def convert_form_to_signal():
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
+    #for i in range(len(x_normalized)):
+    #    print("OUI : ", x_normalized[i])
+
+
     print("x_normalized size : ", x_normalized.size)
     print("y_normalized size : ", y_normalized.size)
 
     # Créez un signal audio en fonction des coordonnées normalisées
-    list_x = []
-    list_y = []
+    list_x, list_y = signal_repetition(x_normalized, y_normalized,COMPUTER_SOUND_RATE)
 
-    while len(list_x) < 4000:
-        for i in range(x_normalized.size):
-            list_x.append(x_normalized[i])
-            list_y.append(y_normalized[i])
+    print("X length : ", len(list_x))
+    print("Y length : ", len(list_y))
 
     wav_file = wave.open(audio_name, "w")
 
     nchannels = 2
     sampwidth = 2
-    framerate_int = int(framerate)
-    nframes = data_size
+    #nframes = data_size
+    nframes = 0
     comptype = "NONE"
     compname = "not compressed"
 
-    wav_file.setparams((nchannels, sampwidth, framerate_int, nframes,
-        comptype, compname))
+    wav_file.setparams((nchannels, sampwidth, COMPUTER_SOUND_RATE,
+                        nframes, comptype, compname))
 
     for s, t in zip(list_x, list_y):
         # write the audio frames to file
-        wav_file.writeframes(struct.pack('h', int(s * amplitude / 2)))
-        wav_file.writeframes(struct.pack('h', int(t * amplitude / 2)))
+        wav_file.writeframes(struct.pack('h', int(s * amplitude)))
+        wav_file.writeframes(struct.pack('h', int(t * amplitude)))
 
     wav_file.close()
 
     # Clear the canva
     canvas.delete("all")  # Efface le dessin sur le canevas
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
+
+
+def signal_repetition(list_x, list_y, computer_sound_rate, forms_per_seconde, record_duration):
+    # Vérification si la forme est trop complexe pour être transformée en signal
+    if computer_sound_rate / len(list_x) < forms_per_seconde:
+        return "The form is too complex to be transformed into a signal", None, None
+
+    output_signal_x = []
+    output_signal_y = []
+    index_list = 0  # Initialisation de l'index pour parcourir les listes
+
+    for _ in range(record_duration):  # Pour chaque unité de durée d'enregistrement
+        for _ in range(computer_sound_rate):  # Pour chaque échantillon dans l'unité de temps
+            # Ajout des valeurs actuelles de x et y aux signaux de sortie
+            output_signal_x.append(list_x[index_list])
+            output_signal_y.append(list_y[index_list])
+            # Incrémentation de l'index pour passer à la prochaine valeur, réinitialisation si nécessaire
+            index_list = (index_list + 1) % len(list_x)
+
+    # Aucun message d'erreur, retour des signaux de sortie
+    return None, output_signal_x, output_signal_y
+
+
 
 def charger_et_traiter_image():
     # Ouvrir une boîte de dialogue pour sélectionner un fichier image
@@ -176,7 +216,7 @@ def charger_et_traiter_image():
 
 def convertir_en_svg():
     # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
+    dwg = svgwrite.Drawing('../../Drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
 
     # Dessiner les lignes du dessin en SVG
     for i in range(len(xList) - 1):

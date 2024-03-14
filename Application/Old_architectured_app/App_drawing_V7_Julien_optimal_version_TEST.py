@@ -210,7 +210,7 @@ def charger_et_traiter_image():
 
 def convertir_en_svg():
     # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
+    dwg = svgwrite.Drawing('../../Drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
 
     # Dessiner les lignes du dessin en SVG
     for i in range(len(xList) - 1):

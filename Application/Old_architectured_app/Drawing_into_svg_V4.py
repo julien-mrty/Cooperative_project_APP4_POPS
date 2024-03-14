@@ -6,8 +6,6 @@ import numpy as np
 import svgwrite
 import wave
 import struct
-import sounddevice as sd
-import matplotlib.pyplot as plt
 
 
 # Canva and window
@@ -15,7 +13,7 @@ window = 0
 canvas = 0
 
 CANVA_WIDTH = 600
-CANVA_HEIGHT = 600
+CANVA_HEIGHT = 400
 WINDOW_WIDTH = CANVA_WIDTH + 20
 WINDOW_HEIGHT = CANVA_HEIGHT + 50
 
@@ -36,18 +34,8 @@ audio_name = "./audio/WaveStereo.wav"
 # Test : 11025.0
 # Échantillonnage à x kHz
 framerate = 11025.0 # framerate as a float
-data_size = 240000
-amplitude = 2 ** 15 - 1 # multiplier for amplitude
-
-COMPUTER_SOUND_RATE = 48000
-RECORD_DURATION = 5
-FORMS_PER_SECONDE = 30
-personlized_rate = 0
-
-frequency = 30
-wavFileDuration = 5  # Seconds, must be an integer
-drawRepetition = frequency * wavFileDuration  # Nombre de répétitions du dessin.
-OutputFilename = './audio/Draw.wav'
+data_size = 100000
+amplitude = 64000.0     # multiplier for amplitude
 
 
 def onClick(event):
@@ -65,6 +53,7 @@ def onMove(event):
         canvas.create_line(xList[-1], yList[-1], event.x, event.y, fill=color, width=3)
         xList.append(event.x)
         yList.append(event.y)
+        # print("LEN : ", len(xList))
 
 
 def onClickRelease(event):
@@ -73,85 +62,66 @@ def onClickRelease(event):
 
 
 def clear_canvas(canva):
-    global drawing, xList, yList
+    global drawing
     canva.delete('all')
-    xList.clear()
-    yList.clear()
     drawing = True
 
 
-def get_default_output_device_sample_rate():
-    # Obtenir l'ID du dispositif de sortie audio par défaut
-    default_output_device = sd.default.device[1]
-    # Obtenir les informations du dispositif
-    device_info = sd.query_devices(default_output_device, 'output')
-    # Retourner la fréquence d'échantillonnage par défaut
-    return device_info['default_samplerate']
+"""
+def signal_moduler(signal_audio):
+    # Modulation du signal audio
+    modulation_frequency = 440  # Fréquence de modulation en Hz
+    t = np.arange(len(signal_audio)) / framerate  # Échantillonnage à 44.1 kHz
+    carrier_wave = np.sin(2 * np.pi * modulation_frequency * t)
+    modulated_signal = np.real(signal_audio * carrier_wave)
 
-sample_rate = get_default_output_device_sample_rate()
-print(f"Default Output Device Sample Rate: {sample_rate} Hz")
+    return modulated_signal
+"""
 
-def clear_wrong_values(tab):
-    for i in range(len(tab)):
-        if tab[i] < -1:
-            tab[i] = -1
-        elif tab[i] > 1:
-            tab[i] = 1
-
-    return tab
 
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
 
     # Normalisez les coordonnées du dessin entre -1 et 1
+    # x_normalized = (np.array(xList) - min(xList)) / (max(xList) - min(xList))
+    # y_normalized = (np.array(yList) - min(yList)) / (max(yList) - min(yList))
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    x_normalized = clear_wrong_values(x_normalized)
-    y_normalized = clear_wrong_values(y_normalized)
+    print("x_normalized size : ", x_normalized.size)
+    print("y_normalized size : ", y_normalized.size)
 
-    rate = len(xList) * frequency
-    if rate > get_default_output_device_sample_rate():
-        print("RATE : ", rate)
-        raise ValueError("Samplerate of over ", get_default_output_device_sample_rate, " can be incompatible with the computer audio board.")
+    # Créez un signal audio en fonction des coordonnées normalisées
+    list_x = []
+    list_y = []
 
-    initial_indices = np.arange(0, len(x_normalized), 1)
-    new_indices = np.arange(0, len(x_normalized), len(x_normalized) / int (get_default_output_device_sample_rate() / frequency))
+    while len(list_x) < 4000:
+        for i in range(x_normalized.size):
+            list_x.append(x_normalized[i])
+            list_y.append(y_normalized[i])
 
-    x_interpolated = np.interp(new_indices, initial_indices, x_normalized)
-    y_interpolated = np.interp(new_indices, initial_indices, y_normalized)
+    wav_file = wave.open(audio_name, "w")
 
-    figure, axis = plt.subplots(2, 1)
+    nchannels = 2
+    sampwidth = 2
+    framerate_int = int(framerate)
+    nframes = data_size
+    comptype = "NONE"
+    compname = "not compressed"
 
-    axis[0].plot(x_interpolated)
-    axis[1].plot(x_interpolated, y_interpolated)
-    plt.show()
+    wav_file.setparams((nchannels, sampwidth, framerate_int, nframes,
+        comptype, compname))
 
-    data_x = []
-    data_y = []
+    for s, t in zip(list_x, list_y):
+        # write the audio frames to file
+        wav_file.writeframes(struct.pack('h', int(s * amplitude / 2)))
+        wav_file.writeframes(struct.pack('h', int(t * amplitude / 2)))
 
-    for i in range(drawRepetition):
-        for j in range(len(x_interpolated)):
-            data_x.append(x_interpolated[j])
-            data_y.append(y_interpolated[j])
-
-    wv = wave.open(OutputFilename, 'w')
-    wv.setparams((2, 2, rate, 0, 'NONE', 'not compressed'))
-    maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
-    wvData = b""
-
-    for i in range(len(data_x)):
-        wvData += struct.pack('h', int(maxVol * data_x[i]))  # Left
-        wvData += struct.pack('h', int(maxVol * data_y[i]))  # Right
-
-    wv.writeframes(wvData)
-    wv.close()
-    print("WAV file is ready.")
+    wav_file.close()
 
     # Clear the canva
     canvas.delete("all")  # Efface le dessin sur le canevas
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
-
 
 def charger_et_traiter_image():
     # Ouvrir une boîte de dialogue pour sélectionner un fichier image
@@ -206,7 +176,7 @@ def charger_et_traiter_image():
 
 def convertir_en_svg():
     # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
+    dwg = svgwrite.Drawing('../../Drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
 
     # Dessiner les lignes du dessin en SVG
     for i in range(len(xList) - 1):

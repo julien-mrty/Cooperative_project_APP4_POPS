@@ -33,8 +33,7 @@ color = 'black'
 #yList = GUI.yList
 
 # Chemin du fichier audio de sortie
-audio_name = "./audio/David.wav"
-OutputFilename = './audio/Julien.wav'
+OutputFilename = './audio/'
 data_size = 240000
 
 # Amplitude du signal audio
@@ -60,8 +59,6 @@ def get_default_output_device_sample_rate():
     # Retourner la fréquence d'échantillonnage par défaut
     return device_info['default_samplerate']
 
-sample_rate = get_default_output_device_sample_rate()
-print(f"Default Output Device Sample Rate: {sample_rate} Hz")
 
 def clear_wrong_values(tab):
     for i in range(len(tab)):
@@ -74,13 +71,17 @@ def clear_wrong_values(tab):
 
 
 # Fonction pour convertir le dessin en signal audio
-def convert_form_to_signal(xList, yList, canvas):
-    global audio_name, amplitude
+def convert_form_to_signal(xList, yList, canvas, audio_name):
+    global amplitude, OutputFilename
+
+    # On récupère le nom choisi par l'utilisateur
+    OutputFilename += audio_name + ".wav"
 
     # Normalisez les coordonnées du dessin entre -1 et 1
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
+    # Recadrage des valeurs hors interval (lorsque la souris sort de la fenêtre pendant le dessin)
     x_normalized = clear_wrong_values(x_normalized)
     y_normalized = clear_wrong_values(y_normalized)
 
@@ -133,6 +134,7 @@ def convert_form_to_signal(xList, yList, canvas):
 
     wv = wave.open(OutputFilename, 'w')
     wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))
+    # CHANGER AVEC AMPLITUDE
     maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
     wvData = b""
 

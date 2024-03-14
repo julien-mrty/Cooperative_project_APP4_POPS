@@ -91,7 +91,7 @@ def open_audio_files_window():
     audio_files_window.title("Liste des fichiers audio convertis en dessin")
 
     # Trouver tous les fichiers audio dans le dossier "audio"
-    audio_files = [f for f in os.listdir("../audio") if f.endswith(".wav")]
+    audio_files = [f for f in os.listdir("audio") if f.endswith(".wav")]
 
     # Fonction pour lire ou arrêter un fichier audio sélectionné
     def toggle_audio(audio_file):
@@ -137,7 +137,6 @@ def open_save_drawing_window():
     save_window.title("Sauvegarder le dessin")
 
     def save_drawing():
-        global xList, yList, saved_drawings
         drawing_name = entry_drawing_name.get()
         if drawing_name:
             saved_drawings.append((drawing_name, xList.copy(), yList.copy()))
@@ -175,6 +174,28 @@ def open_view_drawings_window():
         button_view_drawing.pack()
 
 
+def convert_to_signal(xList, yList, canvas):
+    save_window = tkinter.Toplevel(window)
+    save_window.title("Convertir en fichier audio")
+
+    def save_drawing():
+        audio_name = entry_drawing_name.get()
+        if audio_name:
+            Form_conversion.convert_form_to_signal(xList, yList, canvas, audio_name)
+            save_window.destroy()
+        else:
+            messagebox.showerror("Erreur de sauvegarde", "Veuillez entrer un nom pour le fichier audio.")
+
+    label_drawing_name = tkinter.Label(save_window, text="Nom du fichier audio :")
+    label_drawing_name.pack()
+
+    entry_drawing_name = tkinter.Entry(save_window, width=30)
+    entry_drawing_name.pack()
+
+    button_save_drawing = tkinter.Button(save_window, text="Sauvegarder", command=save_drawing)
+    button_save_drawing.pack()
+
+
 def initWindow():
     global window, canvas
     window = tkinter.Tk()
@@ -194,7 +215,7 @@ def initWindow():
                              y = get_next_y_button_position())
 
     # Button to convert the form to audio signal
-    bouton_convertir_svg = tkinter.Button(window, text="Convert to audio signal", command=lambda: Form_conversion.convert_form_to_signal(xList, yList, canvas))
+    bouton_convertir_svg = tkinter.Button(window, text="Convert to audio signal", command=lambda: convert_to_signal(xList, yList, canvas))
     bouton_convertir_svg.place(x = get_next_x_button_position(button_clear_canva),
                                y = get_next_y_button_position())
 

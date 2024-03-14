@@ -6,8 +6,9 @@ import numpy as np
 import svgwrite
 import wave
 import struct
+
 import sounddevice as sd
-import matplotlib.pyplot as plt
+
 
 
 # Canva and window
@@ -15,7 +16,7 @@ window = 0
 canvas = 0
 
 CANVA_WIDTH = 600
-CANVA_HEIGHT = 600
+CANVA_HEIGHT = 400
 WINDOW_WIDTH = CANVA_WIDTH + 20
 WINDOW_HEIGHT = CANVA_HEIGHT + 50
 
@@ -36,18 +37,12 @@ audio_name = "./audio/WaveStereo.wav"
 # Test : 11025.0
 # Échantillonnage à x kHz
 framerate = 11025.0 # framerate as a float
-data_size = 240000
-amplitude = 2 ** 15 - 1 # multiplier for amplitude
+data_size = 100000
+amplitude = 32000     # multiplier for amplitude
 
 COMPUTER_SOUND_RATE = 48000
 RECORD_DURATION = 5
 FORMS_PER_SECONDE = 30
-personlized_rate = 0
-
-frequency = 30
-wavFileDuration = 5  # Seconds, must be an integer
-drawRepetition = frequency * wavFileDuration  # Nombre de répétitions du dessin.
-OutputFilename = './audio/Draw.wav'
 
 
 def onClick(event):
@@ -65,6 +60,7 @@ def onMove(event):
         canvas.create_line(xList[-1], yList[-1], event.x, event.y, fill=color, width=3)
         xList.append(event.x)
         yList.append(event.y)
+        # print("LEN : ", len(xList))
 
 
 def onClickRelease(event):
@@ -73,13 +69,21 @@ def onClickRelease(event):
 
 
 def clear_canvas(canva):
-    global drawing, xList, yList
+    global drawing
     canva.delete('all')
-    xList.clear()
-    yList.clear()
     drawing = True
 
 
+"""
+def signal_moduler(signal_audio):
+    # Modulation du signal audio
+    modulation_frequency = 440  # Fréquence de modulation en Hz
+    t = np.arange(len(signal_audio)) / framerate  # Échantillonnage à 44.1 kHz
+    carrier_wave = np.sin(2 * np.pi * modulation_frequency * t)
+    modulated_signal = np.real(signal_audio * carrier_wave)
+
+    return modulated_signal
+"""
 def get_default_output_device_sample_rate():
     # Obtenir l'ID du dispositif de sortie audio par défaut
     default_output_device = sd.default.device[1]
@@ -91,70 +95,72 @@ def get_default_output_device_sample_rate():
 sample_rate = get_default_output_device_sample_rate()
 print(f"Default Output Device Sample Rate: {sample_rate} Hz")
 
-def clear_wrong_values(tab):
-    for i in range(len(tab)):
-        if tab[i] < -1:
-            tab[i] = -1
-        elif tab[i] > 1:
-            tab[i] = 1
-
-    return tab
-
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
 
     # Normalisez les coordonnées du dessin entre -1 et 1
+    # x_normalized = (np.array(xList) - min(xList)) / (max(xList) - min(xList))
+    # y_normalized = (np.array(yList) - min(yList)) / (max(yList) - min(yList))
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    x_normalized = clear_wrong_values(x_normalized)
-    y_normalized = clear_wrong_values(y_normalized)
+    #for i in range(len(x_normalized)):
+    #    print("OUI : ", x_normalized[i])
 
-    rate = len(xList) * frequency
-    if rate > get_default_output_device_sample_rate():
-        print("RATE : ", rate)
-        raise ValueError("Samplerate of over ", get_default_output_device_sample_rate, " can be incompatible with the computer audio board.")
 
-    x_interpolation = np.linspace(-1, 1, int (get_default_output_device_sample_rate() / frequency))
-    initial_indices = np.arange(0, len(x_normalized), 1)
-    new_indices = np.arange(0, len(x_normalized), len(x_normalized) / int (get_default_output_device_sample_rate() / frequency))
+    print("x_normalized size : ", x_normalized.size)
+    print("y_normalized size : ", y_normalized.size)
 
-    print("Nombre de points  par image souhaîté : ", int (get_default_output_device_sample_rate() / frequency))
-    print("LEN NEW  : ", len(new_indices))
+    # Créez un signal audio en fonction des coordonnées normalisées
+    list_x, list_y = signal_repetition(x_normalized, y_normalized,COMPUTER_SOUND_RATE)
 
-    x_interpolated = np.interp(new_indices, initial_indices, x_normalized)
-    y_interpolated = np.interp(new_indices, initial_indices, y_normalized)
+    print("X length : ", len(list_x))
+    print("Y length : ", len(list_y))
 
-    figure, axis = plt.subplots(2, 1)
+    wav_file = wave.open(audio_name, "w")
 
-    axis[0].plot(x_interpolation)
-    axis[1].plot(x_interpolated)
-    plt.show()
+    nchannels = 2
+    sampwidth = 2
+    #nframes = data_size
+    nframes = 0
+    comptype = "NONE"
+    compname = "not compressed"
 
-    data_x = []
-    data_y = []
+    wav_file.setparams((nchannels, sampwidth, COMPUTER_SOUND_RATE,
+                        nframes, comptype, compname))
 
-    for i in range(drawRepetition):
-        for j in range(len(x_interpolated)):
-            data_x.append(x_interpolated[j])
-            data_y.append(y_interpolated[j])
+    for s, t in zip(list_x, list_y):
+        # write the audio frames to file
+        wav_file.writeframes(struct.pack('h', int(s * amplitude)))
+        wav_file.writeframes(struct.pack('h', int(t * amplitude)))
 
-    wv = wave.open(OutputFilename, 'w')
-    wv.setparams((2, 2, rate, 0, 'NONE', 'not compressed'))
-    maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
-    wvData = b""
-
-    for i in range(len(data_x)):
-        wvData += struct.pack('h', int(maxVol * data_x[i]))  # Left
-        wvData += struct.pack('h', int(maxVol * data_y[i]))  # Right
-
-    wv.writeframes(wvData)
-    wv.close()
-    print("WAV file is ready.")
+    wav_file.close()
 
     # Clear the canva
     canvas.delete("all")  # Efface le dessin sur le canevas
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
+
+
+def signal_repetition(list_x, list_y, computer_sound_rate, forms_per_seconde, record_duration):
+    # Vérification si la forme est trop complexe pour être transformée en signal
+    if computer_sound_rate / len(list_x) < forms_per_seconde:
+        return "The form is too complex to be transformed into a signal", None, None
+
+    output_signal_x = []
+    output_signal_y = []
+    index_list = 0  # Initialisation de l'index pour parcourir les listes
+
+    for _ in range(record_duration):  # Pour chaque unité de durée d'enregistrement
+        for _ in range(computer_sound_rate):  # Pour chaque échantillon dans l'unité de temps
+            # Ajout des valeurs actuelles de x et y aux signaux de sortie
+            output_signal_x.append(list_x[index_list])
+            output_signal_y.append(list_y[index_list])
+            # Incrémentation de l'index pour passer à la prochaine valeur, réinitialisation si nécessaire
+            index_list = (index_list + 1) % len(list_x)
+
+    # Aucun message d'erreur, retour des signaux de sortie
+    return None, output_signal_x, output_signal_y
+
 
 
 def charger_et_traiter_image():
@@ -210,7 +216,7 @@ def charger_et_traiter_image():
 
 def convertir_en_svg():
     # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
+    dwg = svgwrite.Drawing('../../Drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
 
     # Dessiner les lignes du dessin en SVG
     for i in range(len(xList) - 1):

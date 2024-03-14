@@ -6,6 +6,7 @@ import numpy as np
 import svgwrite
 import wave
 import struct
+import sounddevice as sd
 
 
 # Canva and window
@@ -34,8 +35,13 @@ audio_name = "./audio/WaveStereo.wav"
 # Test : 11025.0
 # Échantillonnage à x kHz
 framerate = 11025.0 # framerate as a float
-data_size = 100000
-amplitude = 64000.0     # multiplier for amplitude
+data_size = 240000
+amplitude = 2 ** 15 - 1 # multiplier for amplitude
+
+COMPUTER_SOUND_RATE = 48000
+RECORD_DURATION = 5
+FORMS_PER_SECONDE = 30
+personlized_rate = 0
 
 
 def onClick(event):
@@ -67,61 +73,103 @@ def clear_canvas(canva):
     drawing = True
 
 
-"""
-def signal_moduler(signal_audio):
-    # Modulation du signal audio
-    modulation_frequency = 440  # Fréquence de modulation en Hz
-    t = np.arange(len(signal_audio)) / framerate  # Échantillonnage à 44.1 kHz
-    carrier_wave = np.sin(2 * np.pi * modulation_frequency * t)
-    modulated_signal = np.real(signal_audio * carrier_wave)
+def get_default_output_device_sample_rate():
+    # Obtenir l'ID du dispositif de sortie audio par défaut
+    default_output_device = sd.default.device[1]
+    # Obtenir les informations du dispositif
+    device_info = sd.query_devices(default_output_device, 'output')
+    # Retourner la fréquence d'échantillonnage par défaut
+    return device_info['default_samplerate']
 
-    return modulated_signal
-"""
-
+sample_rate = get_default_output_device_sample_rate()
+print(f"Default Output Device Sample Rate: {sample_rate} Hz")
 
 def convert_form_to_signal():
     global xList, yList, framerate, audio_name, amplitude
 
     # Normalisez les coordonnées du dessin entre -1 et 1
-    # x_normalized = (np.array(xList) - min(xList)) / (max(xList) - min(xList))
-    # y_normalized = (np.array(yList) - min(yList)) / (max(yList) - min(yList))
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
+
+    personlized_rate = len(x_normalized) * FORMS_PER_SECONDE
 
     print("x_normalized size : ", x_normalized.size)
     print("y_normalized size : ", y_normalized.size)
 
     # Créez un signal audio en fonction des coordonnées normalisées
-    list_x = []
-    list_y = []
+    list_x, list_y = signal_repetition(x_normalized, y_normalized)
+    #list_x, list_y = signal_repetition_personalized_rate(x_normalized, y_normalized)
 
-    while len(list_x) < 4000:
-        for i in range(x_normalized.size):
-            list_x.append(x_normalized[i])
-            list_y.append(y_normalized[i])
+    print("X length : ", len(list_x))
+    print("Y length : ", len(list_y))
 
     wav_file = wave.open(audio_name, "w")
 
     nchannels = 2
     sampwidth = 2
-    framerate_int = int(framerate)
     nframes = data_size
+    #nframes = 0
     comptype = "NONE"
     compname = "not compressed"
 
-    wav_file.setparams((nchannels, sampwidth, framerate_int, nframes,
-        comptype, compname))
+    wav_file.setparams((nchannels, sampwidth, COMPUTER_SOUND_RATE, nframes, comptype, compname))
+    #wav_file.setparams((nchannels, sampwidth, personlized_rate, nframes, comptype, compname))
 
-    for s, t in zip(list_x, list_y):
+    for x, y in zip(list_x, list_y):
         # write the audio frames to file
-        wav_file.writeframes(struct.pack('h', int(s * amplitude / 2)))
-        wav_file.writeframes(struct.pack('h', int(t * amplitude / 2)))
+        wav_file.writeframes(struct.pack('h', int(x * amplitude)))
+        wav_file.writeframes(struct.pack('h', int(y * amplitude)))
 
     wav_file.close()
 
     # Clear the canva
     canvas.delete("all")  # Efface le dessin sur le canevas
     canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="Form converted to signal", font=("Arial", 16))
+
+
+def signal_repetition_personalized_rate(list_x, list_y):
+    my_rate = len(list_x) * FORMS_PER_SECONDE
+
+    if my_rate > COMPUTER_SOUND_RATE:
+        # Clear the canva
+        canvas.delete("all")  # Efface le dessin sur le canevas
+        canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
+        return
+
+    output_signal_x = []
+    output_signal_y = []
+
+    for i in range(FORMS_PER_SECONDE * RECORD_DURATION):
+        for j in range(len(list_x)):
+            output_signal_x.append(list_x[j])
+            output_signal_y.append(list_y[j])
+
+    return output_signal_x, output_signal_y
+
+
+def signal_repetition(list_x, list_y):
+    if COMPUTER_SOUND_RATE / len(list_x) < FORMS_PER_SECONDE:
+        # Clear the canva
+        canvas.delete("all")  # Efface le dessin sur le canevas
+        canvas.create_text(CANVA_WIDTH / 2, CANVA_HEIGHT / 2, text="The form is too complex to be tranformed to a signal", font=("Arial", 16))
+        return
+
+    output_signal_x = []
+    output_signal_y = []
+
+    for i in range(RECORD_DURATION):
+        for j in range(COMPUTER_SOUND_RATE):
+            index_list = int((j * len(list_x)) / COMPUTER_SOUND_RATE)
+
+            print("index : ", index_list)
+            print("___ value : ", list_x[index_list])
+            print("J : ", j)
+            print("len(list_x) : ", len(list_x))
+            output_signal_x.append(list_x[index_list])
+            output_signal_y.append(list_y[index_list])
+
+    return output_signal_x, output_signal_y
+
 
 def charger_et_traiter_image():
     # Ouvrir une boîte de dialogue pour sélectionner un fichier image
@@ -176,7 +224,7 @@ def charger_et_traiter_image():
 
 def convertir_en_svg():
     # Création d'un objet SVG
-    dwg = svgwrite.Drawing('../drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
+    dwg = svgwrite.Drawing('../../Drawing/draw.svg', profile='tiny', size=(CANVA_WIDTH, CANVA_HEIGHT))
 
     # Dessiner les lignes du dessin en SVG
     for i in range(len(xList) - 1):

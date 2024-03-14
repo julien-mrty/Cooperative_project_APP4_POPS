@@ -62,34 +62,33 @@ FORMS_PER_SECONDE = 30
 # Taux personnalisé pour la fréquence
 personlized_rate = 0
 
-# Coordonnés de la forme
-drawing_segments = []
-
 # Fonction appelée lors d'un clic de souris
 def onClick(event):
-    global drawing_segments
-    # Commence un nouveau segment de dessin
-    drawing_segments.append([event.x, event.y])
+    global xList, yList, drawing
+
+    if drawing is not False:
+        xList.append(event.x)
+        yList.append(event.y)
 
 # Fonction appelée lors d'un mouvement de souris
 def onMove(event):
-    global drawing_segments
-    # Ajoute les coordonnées au segment en cours
-    if drawing_segments:
-        drawing_segments[-1].extend([event.x, event.y])
-        canvas.create_line(drawing_segments[-1], fill=color, width=3)
+    global xList, yList, drawing
+
+    if drawing is not False:
+        canvas.create_line(xList[-1], yList[-1], event.x, event.y, fill=color, width=3)
+        xList.append(event.x)
+        yList.append(event.y)
 
 # Fonction appelée lors du relâchement du clic de souris
 def onClickRelease(event):
-    # Fin du segment de dessin en cours
-    pass
+    global drawing
+    drawing = False
 
 # Fonction pour effacer le canvas
 def clear_canvas(canva):
     global drawing
     canva.delete('all')
     drawing = True
-
 
 # Fonction pour vérifier et ajuster les valeurs incorrectes dans un tableau
 def clear_wrong_values(tab):
@@ -207,7 +206,7 @@ def open_audio_files_window():
     audio_files_window.title("Liste des fichiers audio convertis en dessin")
 
     # Trouver tous les fichiers audio dans le dossier "audio"
-    audio_files = [f for f in os.listdir("./audio") if f.endswith(".wav")]
+    audio_files = [f for f in os.listdir("../audio") if f.endswith(".wav")]
 
     # Fonction pour lire ou arrêter un fichier audio sélectionné
     def toggle_audio(audio_file):

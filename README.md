@@ -1,2 +1,3 @@
 - Lancer l'audio depuis l'interface [NON fonctionnel]
 - Donnner la possibilité de dessiner en plusieurs morceaux en coupant le laser à chaque fois  : [ Flemme en vrai, on verra si c'est necessaire ] 
+- Couper le signal !

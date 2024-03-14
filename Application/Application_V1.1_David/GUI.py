@@ -57,15 +57,15 @@ drawRepetition = frequency * wavFileDuration
 def onClick(event):
     global xList, yList, drawing
 
-    if drawing is not False:
-        xList.append(event.x)
-        yList.append(event.y)
+    drawing = True  # L'utilisateur commence à dessiner
+    xList.append(event.x)
+    yList.append(event.y)
 
 # Fonction appelée lors d'un mouvement de souris
 def onMove(event):
     global xList, yList, drawing
 
-    if drawing is not False:
+    if drawing:
         canvas.create_line(xList[-1], yList[-1], event.x, event.y, fill=color, width=3)
         xList.append(event.x)
         yList.append(event.y)
@@ -73,7 +73,7 @@ def onMove(event):
 # Fonction appelée lors du relâchement du clic de souris
 def onClickRelease(event):
     global drawing
-    drawing = False
+    drawing = False # L'utilisateur a arrêté de dessiner
 
 # Fonction pour effacer le canvas
 def clear_canvas(canva):

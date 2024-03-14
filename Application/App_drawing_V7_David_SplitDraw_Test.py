@@ -90,6 +90,7 @@ def clear_canvas(canva):
     canva.delete('all')
     drawing = True
 
+
 # Fonction pour vérifier et ajuster les valeurs incorrectes dans un tableau
 def clear_wrong_values(tab):
     for i in range(len(tab)):

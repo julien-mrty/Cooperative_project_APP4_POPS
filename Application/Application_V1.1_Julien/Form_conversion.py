@@ -88,21 +88,20 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
     print("Nombre de points : ", len(x_normalized))
 
     rate = len(xList) * frequency
+    total_points = len(x_normalized)
+    max_points = get_default_output_device_sample_rate()
+    step_size = 1
+
     if rate > get_default_output_device_sample_rate():
         print("Rate 1 : ", rate)
-        # Calcul du nombre total de points dans le dessin
-        total_points = len(x_normalized)
-        # Calcul du nombre de points maximum autorisés
-        max_points = get_default_output_device_sample_rate()
 
         # Condition qui détermine la taille du pas
-        if total_points <= max_points:
-            step_size = 1
-        else:
+        if total_points > max_points:
             step_size = total_points // max_points
 
         data_x = []
         data_y = []
+
         for i in range(drawRepetition):
             for n in range(0, total_points, step_size):
                 data_x.append(x_normalized[n])
@@ -112,6 +111,7 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
         print("Rate 2 : ", rate)
         print("get_default_output_device_sample_rate : ", get_default_output_device_sample_rate())
         print("frequency : ", frequency)
+
         initial_indices = np.arange(0, len(x_normalized), 1)
         new_indices = np.arange(0, len(x_normalized), len(x_normalized) / int (get_default_output_device_sample_rate() / frequency))
 
@@ -131,6 +131,7 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
             for j in range(len(x_interpolated)):
                 data_x.append(x_interpolated[j])
                 data_y.append(y_interpolated[j])
+
 
     wv = wave.open(OutputFilename, 'w')
     wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))

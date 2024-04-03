@@ -94,8 +94,12 @@ def open_audio_files_window():
     audio_files = [f for f in os.listdir("audio") if f.endswith(".wav")]
 
     # Fonction pour lire ou arrêter un fichier audio sélectionné
-    def toggle_audio(audio_file):
+    def toggle_audio(audio_file, button):
         global playing_audio, current_audio_file, audio_data
+
+        print("Button text : ", button.cget('text'))
+        print("current_audio_file : ", current_audio_file)
+        print("audio_file : ", audio_file)
 
         if playing_audio and current_audio_file == audio_file:
             sd.stop()
@@ -108,14 +112,29 @@ def open_audio_files_window():
                 sd.play(audio_data, wf.getframerate())
                 current_audio_file = audio_file
                 playing_audio = True
+                button.configure(bg="green")  # Change button color to green when clicked
                 wf.close()
             except Exception as e:
                 print(f"Erreur lors de la lecture du fichier audio : {e}")
 
+    def reset_buttons_color(buttons):
+        for button in buttons:
+            button.configure(bg="SystemButtonFace")  # Change button color to default
+
+
+    def play_button_on_click(buttons, audio_file, button):
+        reset_buttons_color(buttons)
+        toggle_audio(audio_file, button)
+
     # Fonction pour créer les boutons de lecture pour chaque fichier audio
     def create_play_buttons():
-        for audio_file in audio_files:
-            play_button = tkinter.Button(audio_files_window, text=audio_file, command=lambda af=audio_file: toggle_audio(af))
+        buttons = []
+
+        for i in range(len(audio_files)):
+            play_button = tkinter.Button(audio_files_window, text=audio_files[i])
+            play_button.configure(
+                command=lambda button=play_button, af=audio_files[i]: play_button_on_click(buttons, af, button))
+            buttons.append(play_button)
             play_button.pack()
 
     # Création des boutons pour chaque fichier audio

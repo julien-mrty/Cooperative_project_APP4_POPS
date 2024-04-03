@@ -62,7 +62,9 @@ def get_default_output_device_sample_rate():
 
 def clear_wrong_values(tab):
     for i in range(len(tab)):
-        if tab[i] < -1:
+        if tab[i] == 10.0:
+            print("tab[i] : ", tab[i])
+        elif tab[i] < -1:
             tab[i] = -1
         elif tab[i] > 1:
             tab[i] = 1
@@ -81,9 +83,14 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
+    for i in range(len(x_normalized)):
+        print("x = ", x_normalized[i])
+        print("y = ", y_normalized[i])
+
+
     # Recadrage des valeurs hors interval (lorsque la souris sort de la fenêtre pendant le dessin)
-    x_normalized = clear_wrong_values(x_normalized)
-    y_normalized = clear_wrong_values(y_normalized)
+    #x_normalized = clear_wrong_values(x_normalized)
+    #y_normalized = clear_wrong_values(y_normalized)
 
     print("Nombre de points : ", len(x_normalized))
 

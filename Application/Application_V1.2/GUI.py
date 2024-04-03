@@ -67,14 +67,32 @@ def onMove(event):
     global xList, yList, drawing
 
     if drawing:
-        canvas.create_line(xList[-1], yList[-1], event.x, event.y, fill=color, width=3)
-        xList.append(event.x)
-        yList.append(event.y)
+        print("x : ", event.x)
+        print("y : ", event.y)
+        if event.x >= CANVA_WIDTH - 1:
+            x = CANVA_WIDTH - 1
+        elif event.x <= 0:
+            x = 1
+        else:
+            x = event.x
+
+        if event.y >= CANVA_HEIGHT - 1:
+            y = CANVA_HEIGHT - 1
+        elif event.y <= 0:
+            y = 1
+        else:
+            y = event.y
+
+        canvas.create_line(xList[-1], yList[-1], x, y, fill=color, width=3)
+        xList.append(x)
+        yList.append(y)
 
 # Fonction appelée lors du relâchement du clic de souris
 def onClickRelease(event):
     global drawing
     drawing = False
+    xList.append(CANVA_WIDTH)
+    yList.append(CANVA_HEIGHT)
 
 # Fonction pour effacer le canvas
 def clear_canvas(canva):

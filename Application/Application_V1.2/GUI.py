@@ -6,12 +6,11 @@ import sounddevice as sd  # Pour jouer du son
 import os  # Pour manipuler le systeme
 import Form_conversion
 
-# Variables globales pour l'audio
+# Audio parameters
 playing_audio = False
 current_audio_file = None
 audio_data = None
 saved_drawings = []
-
 
 # Canva and window
 window = 0
@@ -22,38 +21,16 @@ CANVA_HEIGHT = 680
 WINDOW_WIDTH = CANVA_WIDTH + 20
 WINDOW_HEIGHT = CANVA_HEIGHT + 50
 
-# Distance horizontale entre les boutons
-X_DISTANCE_BETWEEN_BUTTON = 10
+X_DISTANCE_BETWEEN_BUTTON = 10  # Distance horizontale entre les boutons
 
 drawing = True
+color = 'black'  # Couleur du trait de dessin
 
-# Couleur du trait de dessin
-color = 'black'
-
-# Listes des coordonnées x et y du dessin
+# Listes des coordonnées du dessin
 xList = []
 yList = []
 
-# Chemin du fichier audio de sortie
-audio_name = "./audio/David.wav"
-OutputFilename = './audio/Julien.wav'
-data_size = 240000
 
-# Amplitude du signal audio
-amplitude = 2 ** 15 - 1  # multiplicateur pour l'amplitude
-
-RECORD_DURATION = 5
-FORMS_PER_SECONDE = 30
-personlized_rate = 0
-
-# Fréquence du signal audio
-frequency = 30
-wavFileDuration = 5  # Seconds, must be an integer
-
-# Nombre de répétitions du dessin
-drawRepetition = frequency * wavFileDuration
-
-# Fonction appelée lors d'un clic de souris
 # Fonction appelée lors d'un clic de souris
 def onClick(event):
     global xList, yList, drawing
@@ -62,13 +39,12 @@ def onClick(event):
     xList.append(event.x)
     yList.append(event.y)
 
+
 # Fonction appelée lors d'un mouvement de souris
 def onMove(event):
     global xList, yList, drawing
 
     if drawing:
-        print("x : ", event.x)
-        print("y : ", event.y)
         if event.x >= CANVA_WIDTH - 1:
             x = CANVA_WIDTH - 1
         elif event.x <= 0:
@@ -87,12 +63,14 @@ def onMove(event):
         xList.append(x)
         yList.append(y)
 
+
 # Fonction appelée lors du relâchement du clic de souris
 def onClickRelease(event):
     global drawing
     drawing = False
     xList.append(CANVA_WIDTH)
     yList.append(CANVA_HEIGHT)
+
 
 # Fonction pour effacer le canvas
 def clear_canvas(canva):
@@ -132,11 +110,9 @@ def open_audio_files_window():
             except Exception as e:
                 print(f"Erreur lors de la lecture du fichier audio : {e}")
 
-
     def reset_buttons_color(buttons):
         for button in buttons:
             button.configure(bg="SystemButtonFace")  # Change button color to default
-
 
     def play_button_on_click(buttons, audio_file, button):
         reset_buttons_color(buttons)
@@ -166,6 +142,7 @@ def open_audio_files_window():
 
     audio_files_window.protocol("WM_DELETE_WINDOW", on_close)
 
+
 # Fonction pour ouvrir la fenêtre de sauvegarde de dessin
 def open_save_drawing_window():
     save_window = tkinter.Toplevel(window)
@@ -174,7 +151,19 @@ def open_save_drawing_window():
     def save_drawing():
         drawing_name = entry_drawing_name.get()
         if drawing_name:
-            saved_drawings.append((drawing_name, xList.copy(), yList.copy()))
+            xList_copy = xList.copy()
+            yList_copy = yList.copy()
+
+            print("len(xList_copy) : ", len(xList_copy))
+            for i in range(len(xList_copy)):
+                # Clear the values added to cut the laser
+                print("i: ", i)
+                if xList_copy[i] == CANVA_WIDTH:
+                    xList_copy.remove(CANVA_WIDTH)
+                if yList_copy[i] == CANVA_HEIGHT:
+                    yList_copy.remove(CANVA_HEIGHT)
+
+            saved_drawings.append((drawing_name, xList_copy, yList_copy))
             messagebox.showinfo("Sauvegarde réussie", "Le dessin a été sauvegardé avec succès.")
             save_window.destroy()
         else:
@@ -183,7 +172,7 @@ def open_save_drawing_window():
     label_drawing_name = tkinter.Label(save_window, text="Nom du dessin:")
     label_drawing_name.pack()
 
-    entry_drawing_name = tkinter.Entry(save_window, width=30)
+    entry_drawing_name = tkinter.Entry(save_window, width=50)
     entry_drawing_name.pack()
 
     button_save_drawing = tkinter.Button(save_window, text="Sauvegarder", command=save_drawing)
@@ -209,6 +198,20 @@ def open_view_drawings_window():
         button_view_drawing.pack()
 
 
+def add_turn_off_and_light_on():
+    global xList, yList
+
+    for i in range(len(xList)):
+        if xList[i] == CANVA_WIDTH and i < (len(xList) - 2):
+            # Turn off the laser in position i
+            # Move the laser to i + 1 position
+            # Light on the laser in i + 2 position
+            # Continue drawing
+            xList.insert(i + 2, CANVA_WIDTH)
+        if yList[i] == CANVA_HEIGHT and i < (len(yList) - 2):
+            yList.insert(i + 2, CANVA_HEIGHT)
+
+
 def convert_to_signal(xList, yList, canvas):
     save_window = tkinter.Toplevel(window)
     save_window.title("Convertir en fichier audio")
@@ -216,6 +219,7 @@ def convert_to_signal(xList, yList, canvas):
     def save_drawing():
         audio_name = entry_drawing_name.get()
         if audio_name:
+            add_turn_off_and_light_on()
             Form_conversion.convert_form_to_signal(xList, yList, canvas, audio_name)
             save_window.destroy()
         else:
@@ -241,33 +245,34 @@ def initWindow():
                                                                        canvas.bind('<B1-Motion>', onMove),
                                                                        canvas.bind('<ButtonRelease-1>', onClickRelease)
                                                                        })
-    button_draw.place(x =X_DISTANCE_BETWEEN_BUTTON,
-                      y = get_next_y_button_position())
+    button_draw.place(x=X_DISTANCE_BETWEEN_BUTTON,
+                      y=get_next_y_button_position())
 
     # Clear the canva to draw a new form
     button_clear_canva = tkinter.Button(window, text="Clear canva", command=lambda: clear_canvas(canvas))
-    button_clear_canva.place(x = get_next_x_button_position(button_draw),
-                             y = get_next_y_button_position())
+    button_clear_canva.place(x=get_next_x_button_position(button_draw),
+                             y=get_next_y_button_position())
 
     # Button to convert the form to audio signal
-    bouton_convertir_svg = tkinter.Button(window, text="Convert to audio signal", command=lambda: convert_to_signal(xList, yList, canvas))
-    bouton_convertir_svg.place(x = get_next_x_button_position(button_clear_canva),
-                               y = get_next_y_button_position())
+    bouton_convertir_svg = tkinter.Button(window, text="Convert to audio signal",
+                                          command=lambda: convert_to_signal(xList, yList, canvas))
+    bouton_convertir_svg.place(x=get_next_x_button_position(button_clear_canva),
+                               y=get_next_y_button_position())
 
     # Bouton pour ouvrir la liste des fichiers audio convertis
     bouton_audio_files = tkinter.Button(window, text="Parcourir les fichiers audio", command=open_audio_files_window)
-    bouton_audio_files.place(x = get_next_x_button_position(bouton_convertir_svg),
-                             y = get_next_y_button_position())
+    bouton_audio_files.place(x=get_next_x_button_position(bouton_convertir_svg),
+                             y=get_next_y_button_position())
 
     # Bouton pour sauvegarder le dessin
     bouton_sauvegarder_dessin = tkinter.Button(window, text="Sauvegarder le dessin", command=open_save_drawing_window)
-    bouton_sauvegarder_dessin.place(x = get_next_x_button_position(bouton_audio_files),
-                                    y = get_next_y_button_position())
+    bouton_sauvegarder_dessin.place(x=get_next_x_button_position(bouton_audio_files),
+                                    y=get_next_y_button_position())
 
     # Bouton pour visualiser les dessins sauvegardés
     bouton_visualiser_dessins = tkinter.Button(window, text="Visualiser les dessins", command=open_view_drawings_window)
-    bouton_visualiser_dessins.place(x = get_next_x_button_position(bouton_sauvegarder_dessin),
-                                    y = get_next_y_button_position())
+    bouton_visualiser_dessins.place(x=get_next_x_button_position(bouton_sauvegarder_dessin),
+                                    y=get_next_y_button_position())
 
     canvas = tkinter.Canvas(window, width=CANVA_WIDTH, height=CANVA_HEIGHT, bg='white')
     canvas.place(x=10, y=40)
@@ -279,9 +284,10 @@ def initWindow():
 
 def get_next_x_button_position(previous_button):
     global window
-    window.update() # Update the coordonates of the widgets in the window
+    window.update()  # Update the coordonates of the widgets in the window
 
     return previous_button.winfo_width() + previous_button.winfo_x() + X_DISTANCE_BETWEEN_BUTTON
+
 
 def get_next_y_button_position():
     return 5

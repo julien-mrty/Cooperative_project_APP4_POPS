@@ -154,19 +154,6 @@ def open_save_drawing_window():
             xList_copy = xList.copy()
             yList_copy = yList.copy()
 
-
-            """
-                        print("len(xList_copy) : ", len(xList_copy))
-            for i in range(len(xList_copy)):
-                if i < len(xList_copy):
-                    # Clear the values added to cut the laser
-                    if xList_copy[i] == CANVA_WIDTH:
-                        xList_copy.remove(CANVA_WIDTH)
-                    if yList_copy[i] == CANVA_HEIGHT:
-                        yList_copy.remove(CANVA_HEIGHT)
-            """
-
-
             saved_drawings.append((drawing_name, xList_copy, yList_copy))
             messagebox.showinfo("Sauvegarde réussie", "Le dessin a été sauvegardé avec succès.")
             save_window.destroy()

@@ -154,14 +154,18 @@ def open_save_drawing_window():
             xList_copy = xList.copy()
             yList_copy = yList.copy()
 
-            print("len(xList_copy) : ", len(xList_copy))
+
+            """
+                        print("len(xList_copy) : ", len(xList_copy))
             for i in range(len(xList_copy)):
-                # Clear the values added to cut the laser
-                print("i: ", i)
-                if xList_copy[i] == CANVA_WIDTH:
-                    xList_copy.remove(CANVA_WIDTH)
-                if yList_copy[i] == CANVA_HEIGHT:
-                    yList_copy.remove(CANVA_HEIGHT)
+                if i < len(xList_copy):
+                    # Clear the values added to cut the laser
+                    if xList_copy[i] == CANVA_WIDTH:
+                        xList_copy.remove(CANVA_WIDTH)
+                    if yList_copy[i] == CANVA_HEIGHT:
+                        yList_copy.remove(CANVA_HEIGHT)
+            """
+
 
             saved_drawings.append((drawing_name, xList_copy, yList_copy))
             messagebox.showinfo("Sauvegarde réussie", "Le dessin a été sauvegardé avec succès.")
@@ -191,7 +195,9 @@ def open_view_drawings_window():
 
         x_points, y_points = drawing[1], drawing[2]
         for i in range(len(x_points) - 1):
-            canvas_view.create_line(x_points[i], y_points[i], x_points[i + 1], y_points[i + 1], fill='black', width=3)
+            if x_points[i] != CANVA_WIDTH and x_points[i + 1] != CANVA_WIDTH\
+                    and y_points[i] != CANVA_HEIGHT and y_points[i + 1] != CANVA_HEIGHT:
+                canvas_view.create_line(x_points[i], y_points[i], x_points[i + 1], y_points[i + 1], fill='black', width=3)
 
     for drawing in saved_drawings:
         button_view_drawing = tkinter.Button(view_window, text=drawing[0], command=lambda d=drawing: view_drawing(d))

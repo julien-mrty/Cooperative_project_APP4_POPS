@@ -211,6 +211,7 @@ def convert_to_signal(xList, yList, canvas):
 
     def save_drawing():
         audio_name = entry_drawing_name.get()
+        print("audio_name : ", audio_name)
         if audio_name:
             add_turn_off_and_light_on()
             Form_conversion.convert_form_to_signal(xList, yList, canvas, audio_name)
@@ -218,7 +219,7 @@ def convert_to_signal(xList, yList, canvas):
         else:
             messagebox.showerror("Erreur de sauvegarde", "Veuillez entrer un nom pour le fichier audio.")
 
-    label_drawing_name = tkinter.Label(save_window, text="Nom du fichier audio :")
+    label_drawing_name = tkinter.Label(save_window, text="Nom du fichier audio  :")
     label_drawing_name.pack()
 
     entry_drawing_name = tkinter.Entry(save_window, width=30)

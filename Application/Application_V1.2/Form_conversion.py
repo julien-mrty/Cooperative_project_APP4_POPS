@@ -28,7 +28,7 @@ drawing = True
 color = 'black'
 
 # Chemin du fichier audio de sortie
-OutputFilename = './audio/'
+data_file = './audio/'
 
 # Amplitude du signal audio
 AMPLITUDE = 2 ** 15 - 1  # amplitude maximum (32767)
@@ -67,10 +67,10 @@ def clear_wrong_values(tab):
 
 # Fonction pour convertir le dessin en signal audio
 def convert_form_to_signal(xList, yList, canvas, audio_name):
-    global AMPLITUDE, OutputFilename
+    global AMPLITUDE
 
     # On récupère le nom choisi par l'utilisateur
-    OutputFilename += audio_name + ".wav"
+    output_file_name = './audio/' + audio_name + ".wav"
 
     # Normalisez les coordonnées du dessin entre -1 et 1
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
@@ -131,7 +131,7 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
                 data_x.append(x_interpolated[j])
                 data_y.append(y_interpolated[j])
 
-    wv = wave.open(OutputFilename, 'w')
+    wv = wave.open(output_file_name, 'w')
     wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))
     wvData = b"" # initializing with empty byte string
 

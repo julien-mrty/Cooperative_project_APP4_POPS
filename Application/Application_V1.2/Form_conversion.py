@@ -4,7 +4,6 @@ import struct  # Pour manipuler des données binaires
 import sounddevice as sd  # Pour jouer du son
 import matplotlib.pyplot as plt
 
-
 # Variables globales pour l'audio
 playing_audio = False
 current_audio_file = None
@@ -28,27 +27,21 @@ drawing = True
 # Couleur du trait de dessin
 color = 'black'
 
-# Listes des coordonnées x et y du dessin
-#xList = GUI.xList
-#yList = GUI.yList
-
 # Chemin du fichier audio de sortie
 OutputFilename = './audio/'
-data_size = 240000
 
 # Amplitude du signal audio
-amplitude = 2 ** 15 - 1  # multiplicateur pour l'amplitude
+AMPLITUDE = 2 ** 15 - 1  # amplitude maximum (32767)
 
 RECORD_DURATION = 5
 FORMS_PER_SECONDE = 30
-personlized_rate = 0
 
 # Fréquence du signal audio
-frequency = 30
+FREQUENCY = 30
 wavFileDuration = 5  # Seconds, must be an integer
 
 # Nombre de répétitions du dessin
-drawRepetition = frequency * wavFileDuration
+drawRepetition = FREQUENCY * wavFileDuration
 
 
 def get_default_output_device_sample_rate():
@@ -74,7 +67,7 @@ def clear_wrong_values(tab):
 
 # Fonction pour convertir le dessin en signal audio
 def convert_form_to_signal(xList, yList, canvas, audio_name):
-    global amplitude, OutputFilename
+    global AMPLITUDE, OutputFilename
 
     # On récupère le nom choisi par l'utilisateur
     OutputFilename += audio_name + ".wav"
@@ -83,24 +76,23 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    for i in range(len(x_normalized)):
-        print("x = ", x_normalized[i])
-        print("y = ", y_normalized[i])
-
-
     # Recadrage des valeurs hors interval (lorsque la souris sort de la fenêtre pendant le dessin)
-    #x_normalized = clear_wrong_values(x_normalized)
-    #y_normalized = clear_wrong_values(y_normalized)
+    # x_normalized = clear_wrong_values(x_normalized)
+    # y_normalized = clear_wrong_values(y_normalized)
 
     print("Nombre de points : ", len(x_normalized))
 
-    rate = len(xList) * frequency
+    rate = len(xList) * FREQUENCY
     total_points = len(x_normalized)
     max_points = get_default_output_device_sample_rate()
     step_size = 1
 
+    print("Default_output_device_sample_rate : ", get_default_output_device_sample_rate())
+    print("frequency : ", FREQUENCY)
+
     if rate > get_default_output_device_sample_rate():
-        print("Rate 1 : ", rate)
+        print("Rate : ", rate)
+        print("On ne consèrve pas tous les points")
 
         # Condition qui détermine la taille du pas
         if total_points > max_points:
@@ -115,21 +107,21 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
                 data_y.append(y_normalized[n])
 
     else:
-        print("Rate 2 : ", rate)
-        print("get_default_output_device_sample_rate : ", get_default_output_device_sample_rate())
-        print("frequency : ", frequency)
+        print("Rate : ", rate)
+        print("On interpole pour créer de nouveaux points")
 
         initial_indices = np.arange(0, len(x_normalized), 1)
-        new_indices = np.arange(0, len(x_normalized), len(x_normalized) / int (get_default_output_device_sample_rate() / frequency))
+        new_indices = np.arange(0, len(x_normalized),
+                                len(x_normalized) / int(get_default_output_device_sample_rate() / FREQUENCY))
 
         x_interpolated = np.interp(new_indices, initial_indices, x_normalized)
         y_interpolated = np.interp(new_indices, initial_indices, y_normalized)
 
-        #figure, axis = plt.subplots(2, 1)
+        # figure, axis = plt.subplots(2, 1)
 
-        #axis[0].plot(x_interpolated)
-        #axis[1].plot(x_interpolated, y_interpolated)
-        #plt.show()
+        # axis[0].plot(x_interpolated)
+        # axis[1].plot(x_interpolated, y_interpolated)
+        # plt.show()
 
         data_x = []
         data_y = []
@@ -139,16 +131,13 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
                 data_x.append(x_interpolated[j])
                 data_y.append(y_interpolated[j])
 
-
     wv = wave.open(OutputFilename, 'w')
     wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))
-    # CHANGER AVEC AMPLITUDE
-    maxVol = 2 ** 15 - 1.0  # maximum amplitude (32767)
-    wvData = b""
+    wvData = b"" # initializing with empty byte string
 
     for i in range(len(data_x)):
-        wvData += struct.pack('h', int(maxVol * data_x[i]))  # Left
-        wvData += struct.pack('h', int(maxVol * data_y[i]))  # Right
+        wvData += struct.pack('h', int(AMPLITUDE * data_x[i]))  # Left
+        wvData += struct.pack('h', int(AMPLITUDE * data_y[i]))  # Right
 
     wv.writeframes(wvData)
     wv.close()

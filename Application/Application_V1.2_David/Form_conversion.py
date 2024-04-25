@@ -28,15 +28,16 @@ drawing = True
 color = 'black'
 
 # Chemin du fichier audio de sortie
-data_file = './audio/'
+OutputFilename = './audio/'
 
 # Amplitude du signal audio
 AMPLITUDE = 2 ** 15 - 1  # amplitude maximum (32767)
 
 RECORD_DURATION = 5
+FORMS_PER_SECONDE = 30
 
 # Fréquence du signal audio
-FREQUENCY = 60
+FREQUENCY = 30
 wavFileDuration = 5  # Seconds, must be an integer
 
 # Nombre de répétitions du dessin
@@ -64,26 +65,20 @@ def clear_wrong_values(tab):
     return tab
 
 
-def return_the_form(y_normalized):
-    y_normalized = -y_normalized
-
-    return y_normalized
-
 # Fonction pour convertir le dessin en signal audio
 def convert_form_to_signal(xList, yList, canvas, audio_name):
-    global AMPLITUDE
+    global AMPLITUDE, OutputFilename
 
     # On récupère le nom choisi par l'utilisateur
-    output_file_name = './audio/' + audio_name + ".wav"
+    OutputFilename += audio_name + ".wav"
 
     # Normalisez les coordonnées du dessin entre -1 et 1
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    # On retourne la forme
-    print("BEFORE y_normalized : ", y_normalized)
-    # y_normalized = return_the_form(y_normalized)
-    print("AFTER y_normalized : ", y_normalized)
+    # Recadrage des valeurs hors interval (lorsque la souris sort de la fenêtre pendant le dessin)
+    # x_normalized = clear_wrong_values(x_normalized)
+    # y_normalized = clear_wrong_values(y_normalized)
 
     print("Nombre de points : ", len(x_normalized))
 
@@ -136,7 +131,7 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
                 data_x.append(x_interpolated[j])
                 data_y.append(y_interpolated[j])
 
-    wv = wave.open(output_file_name, 'w')
+    wv = wave.open(OutputFilename, 'w')
     wv.setparams((2, 2, get_default_output_device_sample_rate(), 0, 'NONE', 'not compressed'))
     wvData = b"" # initializing with empty byte string
 

@@ -34,10 +34,9 @@ OutputFilename = './audio/'
 AMPLITUDE = 2 ** 15 - 1  # amplitude maximum (32767)
 
 RECORD_DURATION = 5
-FORMS_PER_SECONDE = 30
 
 # Fréquence du signal audio
-FREQUENCY = 30
+FREQUENCY = 60
 wavFileDuration = 5  # Seconds, must be an integer
 
 # Nombre de répétitions du dessin
@@ -65,6 +64,11 @@ def clear_wrong_values(tab):
     return tab
 
 
+def return_the_form(y_normalized):
+    y_normalized = -y_normalized
+
+    return y_normalized
+
 # Fonction pour convertir le dessin en signal audio
 def convert_form_to_signal(xList, yList, canvas, audio_name):
     global AMPLITUDE, OutputFilename
@@ -76,9 +80,10 @@ def convert_form_to_signal(xList, yList, canvas, audio_name):
     x_normalized = ((np.array(xList) - (CANVA_WIDTH / 2)) / (CANVA_WIDTH / 2))
     y_normalized = ((np.array(yList) - (CANVA_HEIGHT / 2)) / (CANVA_HEIGHT / 2))
 
-    # Recadrage des valeurs hors interval (lorsque la souris sort de la fenêtre pendant le dessin)
-    # x_normalized = clear_wrong_values(x_normalized)
-    # y_normalized = clear_wrong_values(y_normalized)
+    # On retourne la forme
+    print("BEFORE y_normalized : ", y_normalized)
+    # y_normalized = return_the_form(y_normalized)
+    print("AFTER y_normalized : ", y_normalized)
 
     print("Nombre de points : ", len(x_normalized))
 
